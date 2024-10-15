@@ -1,0 +1,64 @@
+version: "3.9"
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.2
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - ragmind
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.2
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - ragmind
+    depends_on:
+      - elasticsearch
+
+  psql_db:
+    image: postgres:15.2-alpine
+    container_name: psql_db
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=qwerty123
+      - POSTGRES_DB=test_db
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C.UTF-8
+    ports:
+      - "5432:5432"
+    volumes:
+      - psql_data:/var/lib/postgresql/data
+    networks:
+      - ragmind
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - psql_db
+    networks:
+      - ragmind
+
+volumes:
+  es_data:
+    driver: local
+  psql_data:
+    driver: local
+
+networks:
+  ragmind:
+    driver: bridge
