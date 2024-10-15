@@ -11,7 +11,7 @@ from api.database import database
 from rag.utils.es_conn import ELASTICSEARCH
 from rag.llm.embedding_model import EMBEDDING_MODEL
 from rag.llm.rerank_model import RERANK_MODEL
-from rag.llm.chat_model import LLM
+from rag.llm.llm import LLM
 
 
 @asynccontextmanager
