@@ -41,37 +41,33 @@ class Generate:
         system_prompt = self._system_prompt
 
         if user_rag:
-            content = ""
-            data1 = None
-            data2 = None
+
             if extract_keywords:
                 extract_keywords_query = await self._get_extract_keywords_query(content=message.content)
-                data1 = await self._search_knowledge_base(query=extract_keywords_query)
-                print(data1)
+                print(extract_keywords_query)
                 print()
-                # content += self._get_contents(data=result)
+                data1 = await self._search_knowledge_base(query=extract_keywords_query)
 
-            data2 = await self._search_knowledge_base(query=message.content)
-            print(data2)
-            print()
-            result = self._merge_data(data1=data1, data2=data2)
+                data2 = await self._search_knowledge_base(query=message.content)
 
-            print(result)
-            # content = self._get_contents(data=result)
-            #
-            # content += self._get_contents(data=result)
-            #
-            # print(content)
-        #     system_prompt = self._rag_system_prompt.format(knowledge_base=content)
-        #
-        # history = self.get_history(messages, system=system_prompt)
-        #
-        # if stream:
-        #     return StreamingResponse(self._stream_response(history), media_type="text/plain")
-        #
-        # response = await self._respond(history, stream=False)
-        # await self._add_response_to_chat(response)
-        # return response
+                result = self._merge_data(data1=data1, data2=data2, max_records=self._k)
+                content = self._get_contents(data=result)
+
+            else:
+                result = await self._search_knowledge_base(query=message.content)
+                content = self._get_contents(data=result)
+
+            system_prompt = self._rag_system_prompt.format(knowledge_base=content)
+
+        history = self.get_history(messages, system=system_prompt)
+
+        print(system_prompt)
+        if stream:
+            return StreamingResponse(self._stream_response(history), media_type="text/plain")
+
+        response = await self._respond(history, stream=False)
+        await self._add_response_to_chat(response)
+        return response
 
     async def _get_extract_keywords_query(self, content: str) -> str:
 
@@ -84,18 +80,6 @@ class Generate:
             return match.group(1).strip().replace('\n', ' ')
 
         return ""
-
-    # async def _get_query(self, content: str, extract_keywords: bool):
-    #     if extract_keywords:
-    #         keyword = await KEYWORDEXTRACTOR.extract_keywords(question=content, options=self._options)
-    #         pattern = r'ключевые\s*слова[:\s]*([\w,\s]+)'
-    #
-    #         match = re.search(pattern, keyword, re.IGNORECASE | re.DOTALL)
-    #
-    #         if match:
-    #             return match.group(1).strip().replace('\n', ' ')
-    #
-    #     return content
 
     async def _search_knowledge_base(self, query: str):
         return await ELASTICSEARCH.hybrid_search(
@@ -151,7 +135,7 @@ class Generate:
         return merged_data[:max_records]
 
     @classmethod
-    def _get_contents(cls, data: dict) -> str:
+    def _get_contents(cls, data: list) -> str:
         contents = [item['source']['content'] + "\n\n" for item in data]
 
         return "".join(contents)

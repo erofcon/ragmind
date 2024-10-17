@@ -34,7 +34,7 @@ class MSettings(BaseModel):
 class PromptEngine(BaseModel):
     rag_system: str = settings.DEFAULT_RAG_SYSTEM_PROMPT
     system: str = settings.DEFAULT_SYSTEM_PROMPT
-    threshold: float = 0.8
+    threshold: float = 0.6
     k: int = 10
     user_rerank: bool = True
 

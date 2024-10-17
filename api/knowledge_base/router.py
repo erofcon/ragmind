@@ -41,6 +41,7 @@ async def delete(kb_id: uuid.UUID):
 
 @router.put('/api/v1/kb/update')
 async def update(kb_id: uuid.UUID, kb_create: KnowledgeBaseCreate):
+    # TODO: check document progress
     try:
         kb = await get_knowledge_base_by_id(kb_id=kb_id)
 
@@ -54,7 +55,7 @@ async def update(kb_id: uuid.UUID, kb_create: KnowledgeBaseCreate):
 
 
 @router.get('/api/v1/kb/search')
-async def search(kb_id: uuid.UUID, query: str, user_rerank: bool = True, threshold: float = 0.8, k: int = 10):
+async def search(kb_id: uuid.UUID, query: str, user_rerank: bool = True, threshold: float = 0.6, k: int = 10):
     kb = await get_knowledge_base_by_id(kb_id=kb_id)
 
     if not kb:

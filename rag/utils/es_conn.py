@@ -52,7 +52,10 @@ class ESConnector:
                 "content": {
                     "type": "text"
                 },
-                "vector": {
+                "content_vector": {
+                    "type": "dense_vector",
+                },
+                "title_vector": {
                     "type": "dense_vector",
                 }
             }
@@ -83,11 +86,13 @@ class ESConnector:
     async def upsert_to_index(self, index_name: str, doc_id: str, title: str, chunks: list[str]) -> bool:
 
         try:
-            if not self.es_client.indices.exists(index=index_name):
+            if not await self.es_client.indices.exists(index=index_name):
                 raise KeyError(f'Index {index_name} does not exist')
 
             # TODO: check correct delete
             await self.delete_index_chunks(index_name=index_name, doc_id=doc_id)
+
+            title_vector = EMBEDDING_MODEL.encode(title)
 
             for inx, chunk in enumerate(chunks):
                 vector = EMBEDDING_MODEL.encode(chunk)
@@ -97,7 +102,8 @@ class ESConnector:
                     "chunk_index": inx + 1,
                     "title": title,
                     "content": chunk,
-                    "vector": vector
+                    "content_vector": vector,
+                    "title_vector": title_vector,
                 }
 
                 await self.es_client.index(index=index_name, body=body)
@@ -116,7 +122,7 @@ class ESConnector:
 
         body = {
             "_source": {
-                "excludes": ["vector"]
+                "excludes": ["content_vector", "title_vector"]
             },
             "query": {
                 "bool": {
@@ -142,7 +148,7 @@ class ESConnector:
 
         body = {
             "_source": {
-                "excludes": ["vector"]
+                "excludes": ["content_vector", "title_vector"]
             },
             "size": k,
             "query": {
@@ -161,7 +167,7 @@ class ESConnector:
                                     "match": {
                                         "title": {
                                             "query": query,
-                                            "boost": 1.5
+                                            "boost": 8.0
                                         }
                                     }
                                 }
@@ -172,14 +178,24 @@ class ESConnector:
                         {
                             "script_score": {
                                 "script": {
-                                    "source": "cosineSimilarity(params.query_vector, 'vector')",
+                                    "source": "cosineSimilarity(params.query_vector, 'content_vector')",
                                     "params": {
                                         "query_vector": vector,
                                         "weight": 4.0
                                     }
                                 },
-
-                            }
+                            },
+                        },
+                        {
+                            "script_score": {
+                                "script": {
+                                    "source": "cosineSimilarity(params.query_vector, 'title_vector')",
+                                    "params": {
+                                        "query_vector": vector,
+                                        "weight": 8.0
+                                    }
+                                },
+                            },
                         }
                     ],
                     "boost_mode": "multiply",
@@ -195,7 +211,7 @@ class ESConnector:
             return []
 
         if user_rerank:
-            texts = [result['source']['content'] for result in extract_results]
+            texts = [result['source']['title'] + ": " + result['source']['content'] for result in extract_results]
 
             rerank_results = RERANK_MODEL.similarity(query=query, texts=texts)
 
