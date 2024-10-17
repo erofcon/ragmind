@@ -55,46 +55,19 @@ async def list_chats():
 @router.post('/api/v1/chat/generation')
 async def chat_generate(chat_id: uuid.UUID, message: MessageCreate, use_rag: bool = True, extract_keywords: bool = True,
                         stream: bool = True):
-    chat = await get_chat_by_id(chat_id)
+    try:
+        chat = await get_chat_by_id(chat_id)
 
-    if not chat:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Chat not found')
+        if not chat:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Chat not found')
 
-    generate = Generate(chat=chat)
+        generate = Generate(chat=chat)
 
-    return await generate.generate(message=message, user_rag=use_rag, extract_keywords=extract_keywords, stream=stream)
+        return await generate.generate(message=message, user_rag=use_rag, extract_keywords=extract_keywords,
+                                       stream=stream)
 
-
-# @router.post('/api/v1/chat/completion')
-# async def chat_completion(chat_id: uuid.UUID, message: MessageCreate, use_rag: bool = True,
-#                           extract_keywords: bool = True):
-#
-#
-#     if not chat:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Chat not found')
-#
-#     await add_message_to_chat(chat_id, message)
-#
-#     messages = await get_all_messages(chat_id)
-#
-#     if not use_rag:
-#         return StreamingResponse(
-#             LLM.stream_chat(chat_id=chat_id, history=messages, system=chat.prompt_engine["system"],
-#                             conf=chat.m_settings),
-#             media_type="text/plain")
-#
-#     else:
-#         result = await ELASTICSEARCH.hybrid_search(index_name=chat.kb_id, query=message.content,
-#                                                    user_rerank=chat.prompt_engine["user_rerank"],
-#                                                    threshold=chat.prompt_engine["threshold"], k=chat.prompt_engine["k"])
-#
-#         prompt = chat.prompt_engine["rag_system"].format(knowledge_base=result)
-#         conf = get_model_config(conf=chat.m_settings)
-#
-#         return StreamingResponse(
-#             LLM.stream_chat(chat_id=chat_id, history=messages, system=prompt,
-#                             conf=conf),
-#             media_type="text/plain")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get('/api/v1/chat/message/list')

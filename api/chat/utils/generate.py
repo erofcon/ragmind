@@ -1,4 +1,6 @@
+import re
 import uuid
+from typing import AsyncGenerator
 
 from starlette.responses import StreamingResponse
 
@@ -39,24 +41,61 @@ class Generate:
         system_prompt = self._system_prompt
 
         if user_rag:
-            query = await self._get_query(message.content, extract_keywords)
-            result = await self._search_knowledge_base(query)
+            content = ""
+            data1 = None
+            data2 = None
+            if extract_keywords:
+                extract_keywords_query = await self._get_extract_keywords_query(content=message.content)
+                data1 = await self._search_knowledge_base(query=extract_keywords_query)
+                print(data1)
+                print()
+                # content += self._get_contents(data=result)
+
+            data2 = await self._search_knowledge_base(query=message.content)
+            print(data2)
+            print()
+            result = self._merge_data(data1=data1, data2=data2)
+
             print(result)
-            system_prompt = self._rag_system_prompt.format(knowledge_base=result)
+            # content = self._get_contents(data=result)
+            #
+            # content += self._get_contents(data=result)
+            #
+            # print(content)
+        #     system_prompt = self._rag_system_prompt.format(knowledge_base=content)
+        #
+        # history = self.get_history(messages, system=system_prompt)
+        #
+        # if stream:
+        #     return StreamingResponse(self._stream_response(history), media_type="text/plain")
+        #
+        # response = await self._respond(history, stream=False)
+        # await self._add_response_to_chat(response)
+        # return response
 
-        history = self.get_history(messages, system=system_prompt)
+    async def _get_extract_keywords_query(self, content: str) -> str:
 
-        return await self._respond(history, stream)
+        keyword = await KEYWORDEXTRACTOR.extract_keywords(question=content, options=self._options)
+        pattern = r'ключевые\s*слова[:\s]*([\w,\s]+)'
 
-    async def _get_query(self, content: str, extract_keywords: bool):
-        if extract_keywords:
-            keyword = await KEYWORDEXTRACTOR.extract_keywords(question=content, options=self._options)
-            print(keyword)
-            keyword = keyword.split("ключевые слова:")[-1].strip()
-            print(keyword)
+        match = re.search(pattern, keyword, re.IGNORECASE | re.DOTALL)
 
-            return keyword
-        return content
+        if match:
+            return match.group(1).strip().replace('\n', ' ')
+
+        return ""
+
+    # async def _get_query(self, content: str, extract_keywords: bool):
+    #     if extract_keywords:
+    #         keyword = await KEYWORDEXTRACTOR.extract_keywords(question=content, options=self._options)
+    #         pattern = r'ключевые\s*слова[:\s]*([\w,\s]+)'
+    #
+    #         match = re.search(pattern, keyword, re.IGNORECASE | re.DOTALL)
+    #
+    #         if match:
+    #             return match.group(1).strip().replace('\n', ' ')
+    #
+    #     return content
 
     async def _search_knowledge_base(self, query: str):
         return await ELASTICSEARCH.hybrid_search(
@@ -66,13 +105,56 @@ class Generate:
             k=self._k
         )
 
+    async def _stream_response(self, history: list[dict]) -> AsyncGenerator[str, None]:
+        buffer = []
+        async for chunk in LLM.stream_chat(history=history, conf=self._options):
+            buffer.append(chunk)
+            yield chunk
+
+        full_response = "".join(buffer)
+        await self._add_response_to_chat(full_response)
+
+    async def _add_response_to_chat(self, response: str):
+        response_message = MessageCreate(
+            chat_id=self._chat_id,
+            role="assistant",
+            content=response
+        )
+        await add_message_to_chat(chat_id=self._chat_id, message=response_message)
+
     async def _respond(self, history: list[dict], stream: bool):
+
         if stream:
             return StreamingResponse(
                 LLM.stream_chat(history=history, conf=self._options),
                 media_type="text/plain"
             )
         return await LLM.chat(history=history, conf=self._options)
+
+    @classmethod
+    def _merge_data(cls, data1: dict, data2: dict, max_records=10):
+        combined = {}
+
+        for item in data1:
+            combined[item['id']] = item
+
+        for item in data2:
+            if item['id'] in combined:
+
+                if item['score'] > combined[item['id']]['score']:
+                    combined[item['id']] = item
+            else:
+                combined[item['id']] = item
+
+        merged_data = sorted(combined.values(), key=lambda x: x['score'], reverse=True)
+
+        return merged_data[:max_records]
+
+    @classmethod
+    def _get_contents(cls, data: dict) -> str:
+        contents = [item['source']['content'] + "\n\n" for item in data]
+
+        return "".join(contents)
 
     @classmethod
     def get_history(cls, messages: list[MessageBase], system: str = None):
