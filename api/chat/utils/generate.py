@@ -1,5 +1,7 @@
+import json
 import re
 import uuid
+from datetime import datetime
 from typing import AsyncGenerator
 
 from starlette.responses import StreamingResponse
@@ -10,7 +12,7 @@ from api.chat.utils.keyword import KEYWORDEXTRACTOR
 from rag.utils.es_conn import ELASTICSEARCH
 from api.chat.schemas import ChatModel, MessageBase, MessageCreate
 from api.chat.schemas import MSettings
-from api.chat.crud import add_message_to_chat, get_all_messages
+from api.chat.crud import add_message_to_chat, get_all_messages, add_message_to_chat_with_metadata
 
 
 class Generate:
@@ -63,11 +65,12 @@ class Generate:
 
         print(system_prompt)
         if stream:
-            return StreamingResponse(self._stream_response(history), media_type="text/plain")
+            return StreamingResponse(self._stream_metadata_and_content(history), media_type="text/plain")
 
         response = await self._respond(history, stream=False)
-        await self._add_response_to_chat(response)
-        return response
+
+        message = await self._add_response_to_chat(response)
+        return message
 
     async def _get_extract_keywords_query(self, content: str) -> str:
 
@@ -89,6 +92,29 @@ class Generate:
             k=self._k
         )
 
+    async def _stream_metadata_and_content(self, history: list[dict]) -> AsyncGenerator[str, None]:
+        created_at = datetime.utcnow()
+        metadata = {
+            "id": str(uuid.uuid4()),
+            "role": "assistant",
+            "created_at": created_at.isoformat(),
+            "chat_id": str(self._chat_id)
+        }
+        buffer = []
+
+        yield json.dumps(metadata) + "\n"
+
+        async for chunk in LLM.stream_chat(history=history, conf=self._options):
+            buffer.append(chunk)
+            yield chunk + "\n"
+
+        full_response = "".join(buffer)
+
+        metadata["content"] = full_response
+        metadata["created_at"] = created_at
+
+        await add_message_to_chat_with_metadata(metadata=metadata)
+
     async def _stream_response(self, history: list[dict]) -> AsyncGenerator[str, None]:
         buffer = []
         async for chunk in LLM.stream_chat(history=history, conf=self._options):
@@ -104,7 +130,7 @@ class Generate:
             role="assistant",
             content=response
         )
-        await add_message_to_chat(chat_id=self._chat_id, message=response_message)
+        return await add_message_to_chat(chat_id=self._chat_id, message=response_message)
 
     async def _respond(self, history: list[dict], stream: bool):
 

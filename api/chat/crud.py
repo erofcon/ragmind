@@ -72,4 +72,11 @@ async def add_message_to_chat(chat_id: uuid.UUID, message: MessageCreate) -> Mes
 
     await database.execute(query)
 
-    return query
+    return message
+
+
+async def add_message_to_chat_with_metadata(metadata: dict) -> dict:
+    query = message_model.insert().values(metadata)
+    await database.execute(query)
+
+    return metadata
