@@ -100,3 +100,7 @@ optional** if the migration setup already exists.
 
 > **Note:** If you'd like to launch the web interface for this project, please follow the setup instructions in
 > the [dedicated repository here](https://github.com/erofcon/ragmind_web).
+
+## 📄 License
+
+> This project is open-source and distributed under the **MIT License**, which permits free use, modification, and distribution. For more details, please see the [MIT License documentation](https://opensource.org/licenses/MIT).
