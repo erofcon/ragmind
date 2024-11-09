@@ -7,10 +7,6 @@ repos = [
     'BAAI/bge-reranker-v2-m3'
 ]
 
-spacy_models = [
-    'ru_core_news_lg'
-]
-
 
 def download_model(repo_id: str):
     local_dir = os.path.abspath(os.path.join("huggingface", repo_id))
