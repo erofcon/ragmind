@@ -64,7 +64,7 @@ deliver accurate question-answering capabilities, supported by reliable citation
 
 4. Install requirements:
     ```bash
-   pip install -r req.txt
+   pip install -r requirements.txt
    ```
 
 ## ⚠️ Important
