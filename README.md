@@ -98,10 +98,16 @@ optional** if the migration setup already exists.
 
 ## 🧠 Language Model Setup
 
-> **Note:** To run this project, you’ll need access to a Large Language Model (LLM), either by hosting one locally or by using an existing service like **OpenAI's ChatGPT**. 
-> For a local setup, you can explore tools like [LM Studio](https://lmstudio.ai/) as an example solution for deploying and managing language models on your own machine.
-
-> **Dependency Notice:** Before running the project, ensure you download the necessary model dependencies by executing the `download_deeps.py` script:
+> **Note:** To run this project, you’ll need access to a Large Language Model (LLM), either by hosting one locally or by
+> using an existing service like **OpenAI's ChatGPT**.
+> For a local setup, you can explore tools like [LM Studio](https://lmstudio.ai/) as an example solution for deploying
+> and managing language models on your own machine.
+>
+> **Configuration:** LLM settings can be customized in the `settings.py` file to suit your specific requirements,
+> whether you're using a local model or an external service.
+>
+> **Dependency Notice:** Before running the project, ensure you download the necessary model dependencies by executing
+> the `download_deeps.py` script:
 > ```bash
 > python download_deeps.py
 > ```
@@ -115,12 +121,12 @@ optional** if the migration setup already exists.
 > ```
 > This will launch the application with the current configuration settings.
 
-
 ## 🌐 Web Interface Setup
 
 > **Note:** If you'd like to launch the web interface for this project, please follow the setup instructions in
 > the [dedicated repository here](https://github.com/erofcon/ragmind_web).
-> **Configuration:** LLM settings can be customized in the `settings.py` file to suit your specific requirements, whether you're using a local model or an external service.
+
 ## 📄 License
 
-> This project is open-source and distributed under the **MIT License**, which permits free use, modification, and distribution. For more details, please see the [MIT License documentation](https://opensource.org/licenses/MIT).
+> This project is open-source and distributed under the **MIT License**, which permits free use, modification, and
+> distribution. For more details, please see the [MIT License documentation](https://opensource.org/licenses/MIT).
