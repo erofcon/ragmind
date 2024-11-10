@@ -1,8 +1,8 @@
-import json
 import typing
+from typing import Optional, Any
 from datetime import datetime
 import uuid
-from api.chat.schemas import ChatModelCreate, ChatModel, MessageCreate, MessageBase, Message
+from api.chat.schemas import ChatModelCreate, ChatModel, MessageCreate, MessageBase, MessageMetadata, Source
 from api.chat.models import chat as chat_model
 from api.chat.models import message as message_model
 from api.database import database
@@ -65,18 +65,36 @@ async def get_all_messages(chat_id: uuid.UUID) -> list[MessageBase]:
     return await database.fetch_all(query)
 
 
-async def add_message_to_chat(chat_id: uuid.UUID, message: MessageCreate) -> MessageBase:
-    message = MessageBase(**message.model_dump(), id=uuid.uuid4(), created_at=datetime.utcnow(), chat_id=chat_id)
+async def add_message_to_chat(chat_id: uuid.UUID, message: MessageCreate,
+                              metadata: Optional[MessageMetadata] = None) -> dict[str, Any]:
+    if metadata is None:
+        metadata = MessageMetadata()
 
-    query = message_model.insert().values(message.model_dump())
+    m = MessageBase(
+        **message.model_dump(),
+        id=uuid.uuid4(),
+        created_at=datetime.utcnow(),
+        chat_id=chat_id,
+        metadata=metadata
+    )
 
+    serialized_data = m.model_dump(exclude_none=True)
+
+    if isinstance(serialized_data.get("metadata"), dict) and "source" in serialized_data["metadata"]:
+        serialized_data["metadata"]["source"] = [
+            item.model_dump() if isinstance(item, Source) else item
+            for item in serialized_data["metadata"]["source"]
+        ]
+
+    query = message_model.insert().values(serialized_data)
     await database.execute(query)
 
-    return message
+    return serialized_data
 
 
-async def add_message_to_chat_with_metadata(metadata: dict) -> dict:
-    query = message_model.insert().values(metadata)
-    await database.execute(query)
+async def update_message_content(message_id: uuid.UUID, message: str) -> typing.Any:
+    query = message_model.update().where(message_model.c.id == message_id).values(
+        content=message
+    )
 
-    return metadata
+    return await database.execute(query)

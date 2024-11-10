@@ -1,8 +1,19 @@
+from typing import Optional
+
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 
 import settings
+
+
+class Source(BaseModel):
+    id: UUID
+    name: str
+
+    class Config:
+        from_attributes = True
+        json_encoders = {UUID: str}
 
 
 class Message(BaseModel):
@@ -14,13 +25,20 @@ class MessageCreate(Message):
     pass
 
 
+class MessageMetadata(BaseModel):
+    kb_content: str = ''
+    source: list[dict] = []
+
+
 class MessageBase(Message):
     id: UUID
     created_at: datetime
     chat_id: UUID
+    metadata: Optional[MessageMetadata] = None
 
     class Config:
         from_attributes = True
+        json_encoders = {UUID: str}
 
 
 class MSettings(BaseModel):

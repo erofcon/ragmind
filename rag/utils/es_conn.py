@@ -141,7 +141,8 @@ class ESConnector:
 
         return self._extract_results(result)
 
-    async def hybrid_search(self, index_name: str, query: str, user_rerank: bool = True, threshold: float = 0.9,
+    async def hybrid_search(self, index_name: str, query: str, rerank_query: str = None, user_rerank: bool = True,
+                            threshold: float = 0.9,
                             k: int = 10) -> list[dict]:
 
         vector = EMBEDDING_MODEL.encode(query)
@@ -212,8 +213,9 @@ class ESConnector:
 
         if user_rerank:
             texts = [result['source']['title'] + ": " + result['source']['content'] for result in extract_results]
+            r_query = rerank_query if rerank_query else query
 
-            rerank_results = RERANK_MODEL.similarity(query=query, texts=texts)
+            rerank_results = RERANK_MODEL.similarity(query=r_query, texts=texts)
 
             formatted_results = []
             for original, rerank in zip(extract_results, rerank_results):

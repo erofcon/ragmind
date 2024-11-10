@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Table, Column, String, MetaData, DateTime, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from api.knowledge_base.models import knowledge_base
 
@@ -25,6 +25,7 @@ message = Table(
     Column('id', UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4()),
     Column('role', String()),
     Column('content', Text()),
+    Column('metadata', JSONB),
     Column('created_at', DateTime(timezone=True), default=datetime.utcnow()),
     Column('chat_id', UUID(), ForeignKey(chat.c.id, ondelete='CASCADE')),
 )
