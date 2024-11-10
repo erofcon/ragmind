@@ -114,8 +114,10 @@ class Generate:
             full_response = ""
             async for chunk in LLM.stream_chat(history=history, conf=self._options):
                 full_response += chunk
-                await update_message_content(message_id=message['id'], message=full_response)
+
                 yield chunk + "\n"
+
+            await update_message_content(message_id=message['id'], message=full_response)
         except Exception as e:
             print(f"Error in _stream_metadata_and_content: {e}")
             yield json.dumps({"error": "Stream interrupted due to an error"}, ensure_ascii=False) + "\n"

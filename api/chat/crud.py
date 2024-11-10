@@ -60,7 +60,7 @@ async def delete_all_messages(chat_id: uuid.UUID) -> typing.Any:
 
 
 async def get_all_messages(chat_id: uuid.UUID) -> list[MessageBase]:
-    query = message_model.select().where(message_model.c.chat_id == chat_id)
+    query = message_model.select().where(message_model.c.chat_id == chat_id).order_by(message_model.c.created_at)
 
     return await database.fetch_all(query)
 
