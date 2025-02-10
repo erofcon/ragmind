@@ -6,7 +6,7 @@ DIMENSION = 768
 LLM_HOST = 'http://localhost:1234/v1'
 LLM_API_KEY = 'lm-studio'
 EMBEDDING_MODEL_DIR = 'huggingface/BAAI/bge-m3'
-RERANKER_MODEL_DIR = 'huggingface/BAAI/bge-reranker-v2-m3'
+RERANKER_MODEL_DIR = 'huggingface/qilowoq/bge-reranker-v2-m3-en-ru'
 DEFAULT_RAG_SYSTEM_PROMPT = """
 Вы умный помощник.
 Пожалуйста, кратко изложите содержание базы знаний, чтобы ответить на вопрос.

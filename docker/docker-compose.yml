@@ -1,12 +1,13 @@
 version: "3.9"
 services:
   elasticsearch:
-    image: elasticsearch:8.14.2
+    image: elasticsearch:8.17.1
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - xpack.security.transport.ssl.enabled=false
+
     ports:
       - "9200:9200"
       - "9300:9300"

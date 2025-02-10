@@ -18,7 +18,7 @@ from rag.llm.llm import LLM
 async def lifespan(_: FastAPI):
     await database.connect()
 
-    await LLM.check_connection()
+    # await LLM.check_connection()
     await ELASTICSEARCH.connection()
     EMBEDDING_MODEL.connection()
     RERANK_MODEL.connection()

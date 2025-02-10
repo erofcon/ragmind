@@ -4,7 +4,8 @@ from huggingface_hub import snapshot_download
 
 repos = [
     'BAAI/bge-m3',
-    'BAAI/bge-reranker-v2-m3'
+    'BAAI/bge-reranker-v2-m3',
+    'qilowoq/bge-reranker-v2-m3-en-ru',
 ]
 
 

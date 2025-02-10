@@ -37,31 +37,172 @@ class ESConnector:
         await self.es_client.close()
 
     async def create_index(self, index_name: str) -> ObjectApiResponse[t.Any]:
+
+        # mappings = {
+        #     "settings": {
+        #         "analysis": {
+        #             "filter": {
+        #                 "russian_char_filter": {
+        #                     "type": "mapping",
+        #                     "mappings": [
+        #                         "Ё => Е",
+        #                         "ё => е"
+        #                     ]
+        #                 }
+        #             },
+        #             "analyzer": {
+        #                 "russian_with_synonyms": {
+        #                     "tokenizer": "standard",
+        #                     "filter": [
+        #                         "lowercase",
+        #                         "russian_morphology",
+        #                         "russian_char_filter"
+        #                     ]
+        #                 }
+        #             }
+        #         }
+        #     },
+        #     "properties": {
+        #         "doc_id": {
+        #             "type": "keyword"
+        #         },
+        #         "chunk_index": {
+        #             "type": "integer",
+        #             "index": False
+        #         },
+        #         "title": {
+        #             "type": "text",
+        #             "analyzer": "russian_with_synonyms",
+        #             "fields": {
+        #                 "raw": {
+        #                     "type": "keyword"
+        #                 }
+        #             }
+        #         },
+        #         "content": {
+        #             "type": "text",
+        #             "analyzer": "russian_with_synonyms",
+        #             "fields": {
+        #                 "raw": {
+        #                     "type": "keyword"
+        #                 }
+        #             }
+        #         },
+        #         "content_vector": {
+        #             "type": "dense_vector",
+        #             "index": False,
+        #             "similarity": "cosine"
+        #         },
+        #         "title_vector": {
+        #             "type": "dense_vector",
+        #             "index": False,
+        #             "similarity": "cosine"
+        #         }
+        #     }
+        # }
+
+        # mappings = {
+        #     "properties": {
+        #         "doc_id": {
+        #             "type": "keyword",
+        #         },
+        #         "chunk_index": {
+        #             "type": "integer",
+        #             "index": False,
+        #         },
+        #         "title": {
+        #             "type": "text"
+        #         },
+        #         "content": {
+        #             "type": "text"
+        #         },
+        #         "content_vector": {
+        #             "type": "dense_vector",
+        #         },
+        #         "title_vector": {
+        #             "type": "dense_vector",
+        #         }
+        #     }
+        # }
+
         mappings = {
-            "properties": {
-                "doc_id": {
-                    "type": "keyword",
-                },
-                "chunk_index": {
-                    "type": "integer",
-                    "index": False,
-                },
-                "title": {
-                    "type": "text"
-                },
-                "content": {
-                    "type": "text"
-                },
-                "content_vector": {
-                    "type": "dense_vector",
-                },
-                "title_vector": {
-                    "type": "dense_vector",
+            "settings": {
+                "analysis": {
+                    "char_filter": {
+                        "russian_char_mapping": {
+                            "type": "mapping",
+                            "mappings": [
+                                "Ё => Е",
+                                "ё => е"
+                            ]
+                        }
+                    },
+                    "filter": {
+                        "russian_stemmer": {
+                            "type": "stemmer",
+                            "language": "russian"  # Используем стандартный русский стеммер
+                        }
+                    },
+                    "analyzer": {
+                        "russian_with_stemming": {
+                            "tokenizer": "standard",
+                            "char_filter": ["russian_char_mapping"],  # Преобразование Ё -> Е
+                            "filter": [
+                                "lowercase",
+                                "russian_stemmer"  # Добавляем алгоритмический стеммер
+                            ]
+                        }
+                    }
+                }
+            },
+            "mappings": {
+                "properties": {
+                    "doc_id": {
+                        "type": "keyword"
+                    },
+                    "chunk_index": {
+                        "type": "integer",
+                        "index": False
+                    },
+                    "title": {
+                        "type": "text",
+                        "analyzer": "russian_with_stemming",
+                        "fields": {
+                            "raw": {
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "content": {
+                        "type": "text",
+                        "analyzer": "russian_with_stemming",
+                        "fields": {
+                            "raw": {
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "content_vector": {
+                        "type": "dense_vector",
+                        "dims": 1024,  # Размерность вектора (например, для моделей OpenAI)
+                        "index": True,  # Включаем индексацию
+                        "similarity": "cosine"  # Используем косинусное сходство
+                    },
+                    "title_vector": {
+                        "type": "dense_vector",
+                        "dims": 1024,  # Размерность вектора
+                        "index": True,
+                        "similarity": "cosine"
+                    }
                 }
             }
         }
 
-        return await self.es_client.indices.create(index=index_name, mappings=mappings)
+        # Создание индекса
+        return await self.es_client.indices.create(index=index_name, body=mappings)
+
+        # return await self.es_client.indices.create(index=index_name, body=mappings)
+        # return await self.es_client.indices.create(index=index_name, mappings=mappings)
 
     async def delete_index(self, index_name: str) -> ObjectApiResponse[t.Any]:
         return await self.es_client.indices.delete(index=index_name)
@@ -147,60 +288,97 @@ class ESConnector:
 
         vector = EMBEDDING_MODEL.encode(query)
 
+        # body = {
+        #     "_source": {
+        #         "excludes": ["content_vector", "title_vector"]
+        #     },
+        #     "size": k,
+        #     "query": {
+        #         "function_score": {
+        #             "query": {
+        #                 "bool": {
+        #                     "should": [
+        #                         {
+        #                             "match": {
+        #                                 "content": {
+        #                                     "query": query,
+        #                                 }
+        #                             }
+        #                         },
+        #                         {
+        #                             "match": {
+        #                                 "title": {
+        #                                     "query": query,
+        #                                     "boost": 8.0
+        #                                 }
+        #                             }
+        #                         }
+        #                     ]
+        #                 }
+        #             },
+        #             "functions": [
+        #                 {
+        #                     "script_score": {
+        #                         "script": {
+        #                             "source": "cosineSimilarity(params.query_vector, 'content_vector')",
+        #                             "params": {
+        #                                 "query_vector": vector,
+        #                                 "weight": 4.0
+        #                             }
+        #                         },
+        #                     },
+        #                 },
+        #                 {
+        #                     "script_score": {
+        #                         "script": {
+        #                             "source": "cosineSimilarity(params.query_vector, 'title_vector')",
+        #                             "params": {
+        #                                 "query_vector": vector,
+        #                                 "weight": 8.0
+        #                             }
+        #                         },
+        #                     },
+        #                 }
+        #             ],
+        #             "boost_mode": "multiply",
+        #             "score_mode": "multiply"
+        #         }
+        #     }
+        # }
+
         body = {
             "_source": {
                 "excludes": ["content_vector", "title_vector"]
             },
-            "size": k,
+            "size": k,  # Количество результатов
             "query": {
-                "function_score": {
-                    "query": {
-                        "bool": {
-                            "should": [
-                                {
-                                    "match": {
-                                        "content": {
-                                            "query": query,
-                                        }
-                                    }
-                                },
-                                {
-                                    "match": {
-                                        "title": {
-                                            "query": query,
-                                            "boost": 8.0
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "functions": [
+                "bool": {
+                    "should": [
                         {
-                            "script_score": {
-                                "script": {
-                                    "source": "cosineSimilarity(params.query_vector, 'content_vector')",
-                                    "params": {
-                                        "query_vector": vector,
-                                        "weight": 4.0
-                                    }
-                                },
-                            },
+                            "match": {
+                                "content": {
+                                    "query": query
+                                }
+                            }
                         },
                         {
-                            "script_score": {
-                                "script": {
-                                    "source": "cosineSimilarity(params.query_vector, 'title_vector')",
-                                    "params": {
-                                        "query_vector": vector,
-                                        "weight": 8.0
-                                    }
-                                },
-                            },
+                            "match": {
+                                "title": {
+                                    "query": query,
+                                    "boost": 8.0
+                                }
+                            }
+                        },
+                        {
+                            "knn": {
+                                "field": "content_vector",  # Поле векторного поиска
+                                "query_vector": vector,  # Вектор запроса
+                                "k": k,  # Количество ближайших соседей
+                                "num_candidates": 100  # Количество кандидатов для kNN
+                            }
                         }
                     ],
-                    "boost_mode": "multiply",
-                    "score_mode": "multiply"
+                    "minimum_should_match": 1  # Требуем, чтобы хотя бы один из критериев совпадал
                 }
             }
         }
@@ -208,6 +386,7 @@ class ESConnector:
         result = await self.es_client.search(index=index_name, body=body)
 
         extract_results = self._extract_results(result)
+
         if len(extract_results) == 0:
             return []
 
